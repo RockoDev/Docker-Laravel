@@ -1,0 +1,101 @@
+version: '3.9'
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: 'rockodev/didi-php-apache:8.2'
+    # container_name: appenda_php
+    volumes:
+      # - './www/.env:/var/www/html/.env'
+      # - '/var/www/html/node_modules'
+      # - '/var/www/html/vendor'
+      # - '/var/www/html/public/css'
+      # - '/var/www/html/public/js'
+      # - './www:/var/www/html'
+      - ${PWD}/www:/var/www/html
+      - ${PWD}/.env:/var/www/html/.env
+    ports:
+      - "127.0.0.1:${APP_PORT:-}:80"
+    networks:
+      - backend
+      - default
+    # env_file:
+    #   - www/.env
+    hostname: '${APP_HOSTNAME:-localhost}'
+    depends_on:
+      - mysql
+
+  mysql:
+    platform: linux/x86_64
+    image: 'mysql:8.0.34'
+    volumes:
+      - '.mysql:/var/lib/mysql'
+    ports:
+      - "127.0.0.1:${DB_PORT_FORWARD:-}:${DB_PORT:-3306}"
+    networks:
+      - backend
+      - default
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping']
+
+  mongodb:
+    image : mongo:latest
+    volumes:
+      - '.mongodb:/data/db'
+    ports:
+      - "127.0.0.1:${MONGODB_PORT_FORWARD:-}:${MONGODB_PORT:-27017}"
+    networks:
+      - backend
+      - default
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: '${MONGODB_USERNAME}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGODB_PASSWORD}'
+
+  # redis:
+  #   image: 'redis:alpine'
+  #   volumes:
+  #     - '.redis:/data'
+  #   ports:
+  #     - '${REDIS_PORT_FORWARD:-}:6379'
+  #   networks:
+  #     - backend
+  #   healthcheck:
+  #     test: ['CMD', 'redis-cli', 'ping']
+
+  # memcached:
+  #   image: 'memcached:alpine'
+  #   ports:
+  #     - '${MEMCACHED_DB_PORT_FORWARD:-}:11211'
+  #   networks:
+  #     - backend
+
+  # mailhog:
+  #   image: 'mailhog/mailhog:latest'
+  #   ports:
+  #     - '${MAILHOG_PORT_FORWARD:-}:1025'
+  #     - '${MAILHOG_DASHBOARD_PORT_FORWARD:-}:8025'
+  #   networks:
+  #     - backend
+
+networks:
+  backend:
+    driver: bridge
+  default:
+    external: true
+    name: '${APP_NETWORK:-}'
+
+volumes:
+  '.mysql':
+    driver: local
+  '.mongodb':
+    driver: local
